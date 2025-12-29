@@ -1,4 +1,5 @@
 //! This crate contains all shared fullstack server functions.
+pub mod db;
 use dioxus::prelude::*;
 
 /// Echo the user input on the server.
