@@ -9,13 +9,13 @@ name = "migration"
 path = "src/lib.rs"
 
 [dependencies]
-api = { path = "../api" }
+entities = { path = "../entities" }
 async-std = { version = "1", features = ["attributes", "tokio1"] }
-bcrypt = "0.15.1"
 fake = "4.4.0"
-rand = "0.8.5"
 sea-orm = "1.1.0"
 tokio = "1.38.0"
+argon2 = "0.5.3"
+rand = "0.9.2"
 
 [dependencies.sea-orm-migration]
 version = "1.1.0"

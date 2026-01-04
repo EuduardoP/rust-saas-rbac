@@ -1,4 +1,8 @@
-use api::db::entities::{
+use argon2::{
+    password_hash::{rand_core::OsRng, SaltString},
+    Argon2, PasswordHasher,
+};
+use entities::{
     members, organizations, projects,
     sea_orm_active_enums::{self},
     users,
@@ -7,7 +11,7 @@ use fake::{
     faker::{internet::en::*, name::en::*},
     Fake, Faker,
 };
-use rand::seq::SliceRandom;
+use rand::seq::IndexedRandom;
 use sea_orm::{ActiveModelTrait, DbErr, EntityTrait, Set};
 use sea_orm_migration::prelude::*;
 
@@ -18,6 +22,8 @@ pub struct Migration;
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         let db = manager.get_connection();
+        let salt = SaltString::generate(&mut OsRng);
+        let argon2 = Argon2::default();
 
         // DELETING EXISTING DATA
         members::Entity::delete_many().exec(db).await?;
@@ -26,14 +32,17 @@ impl MigrationTrait for Migration {
         users::Entity::delete_many().exec(db).await?;
 
         // HASHING PASSWORD
-        let password_hash = bcrypt::hash("123456", 8).unwrap();
+        let password_hash = argon2
+            .hash_password("123456".as_bytes(), &salt)
+            .unwrap()
+            .to_string();
 
         // CREATING USERS
         let john_doe = users::ActiveModel {
             name: Set(Some("John Doe".to_owned())),
             email: Set("john@acme.com".to_owned()),
             password_hash: Set(Some(password_hash.clone())),
-            avatar_url: Set(Some("https://github.com/diego3g.png".to_owned())),
+            avatar_url: Set(Some("https://avatar.iran.liara.run/public".to_owned())),
             ..Default::default()
         }
         .insert(db)
@@ -43,7 +52,7 @@ impl MigrationTrait for Migration {
             name: Set(Some(Name().fake())),
             email: Set(FreeEmail().fake()),
             password_hash: Set(Some(password_hash.clone())),
-            avatar_url: Set(Some("https://github.com/faker-js/faker.png".to_owned())),
+            avatar_url: Set(Some("https://avatar.iran.liara.run/public".to_owned())),
             ..Default::default()
         }
         .insert(db)
@@ -53,7 +62,7 @@ impl MigrationTrait for Migration {
             name: Set(Some(Name().fake())),
             email: Set(FreeEmail().fake()),
             password_hash: Set(Some(password_hash.clone())),
-            avatar_url: Set(Some("https://github.com/faker-js/faker.png".to_owned())),
+            avatar_url: Set(Some("https://avatar.iran.liara.run/public".to_owned())),
             ..Default::default()
         }
         .insert(db)
@@ -66,7 +75,7 @@ impl MigrationTrait for Migration {
             name: Set("Acme Inc (Admin)".to_owned()),
             domain: Set(Some("acme.com".to_owned())),
             slug: Set("acme-admin".to_owned()),
-            avatar_url: Set(Some("https://github.com/faker-js/faker.png".to_owned())),
+            avatar_url: Set(Some("https://avatar.iran.liara.run/public".to_owned())),
             should_attach_users_by_domain: Set(true),
             owner_id: Set(john_doe.id),
             ..Default::default()
@@ -75,12 +84,12 @@ impl MigrationTrait for Migration {
         .await?;
 
         for _ in 0..3 {
-            let project_owner_id = *user_ids.choose(&mut rand::thread_rng()).unwrap();
+            let project_owner_id = *user_ids.choose(&mut rand::rng()).unwrap();
             projects::ActiveModel {
                 name: Set(Faker.fake::<String>()),
                 slug: Set(Faker.fake::<String>()),
                 description: Set(Faker.fake::<String>()),
-                avatar_url: Set(Some("https://github.com/faker-js/faker.png".to_owned())),
+                avatar_url: Set(Some("https://avatar.iran.liara.run/public".to_owned())),
                 organization_id: Set(acme_admin_org.id),
                 owner_id: Set(project_owner_id),
                 ..Default::default()
@@ -119,7 +128,7 @@ impl MigrationTrait for Migration {
         let acme_billing_org = organizations::ActiveModel {
             name: Set("Acme Inc (Billing)".to_owned()),
             slug: Set("acme-billing".to_owned()),
-            avatar_url: Set(Some("https://github.com/faker-js/faker.png".to_owned())),
+            avatar_url: Set(Some("https://avatar.iran.liara.run/public".to_owned())),
             owner_id: Set(john_doe.id),
             ..Default::default()
         }
@@ -127,12 +136,12 @@ impl MigrationTrait for Migration {
         .await?;
 
         for _ in 0..3 {
-            let project_owner_id = *user_ids.choose(&mut rand::thread_rng()).unwrap();
+            let project_owner_id = *user_ids.choose(&mut rand::rng()).unwrap();
             projects::ActiveModel {
                 name: Set(Faker.fake::<String>()),
                 slug: Set(Faker.fake::<String>()),
                 description: Set(Faker.fake::<String>()),
-                avatar_url: Set(Some("https://github.com/faker-js/faker.png".to_owned())),
+                avatar_url: Set(Some("https://avatar.iran.liara.run/public".to_owned())),
                 organization_id: Set(acme_billing_org.id),
                 owner_id: Set(project_owner_id),
                 ..Default::default()
@@ -171,7 +180,7 @@ impl MigrationTrait for Migration {
         let acme_member_org = organizations::ActiveModel {
             name: Set("Acme Inc (Member)".to_owned()),
             slug: Set("acme-member".to_owned()),
-            avatar_url: Set(Some("https://github.com/faker-js/faker.png".to_owned())),
+            avatar_url: Set(Some("https://avatar.iran.liara.run/public".to_owned())),
             owner_id: Set(john_doe.id),
             ..Default::default()
         }
@@ -179,12 +188,12 @@ impl MigrationTrait for Migration {
         .await?;
 
         for _ in 0..3 {
-            let project_owner_id = *user_ids.choose(&mut rand::thread_rng()).unwrap();
+            let project_owner_id = *user_ids.choose(&mut rand::rng()).unwrap();
             projects::ActiveModel {
                 name: Set(Faker.fake::<String>()),
                 slug: Set(Faker.fake::<String>()),
                 description: Set(Faker.fake::<String>()),
-                avatar_url: Set(Some("https://github.com/faker-js/faker.png".to_owned())),
+                avatar_url: Set(Some("https://avatar.iran.liara.run/public".to_owned())),
                 organization_id: Set(acme_member_org.id),
                 owner_id: Set(project_owner_id),
                 ..Default::default()
