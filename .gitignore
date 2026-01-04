@@ -7,3 +7,4 @@
 **/*.rs.bk
 .env
 node_modules
+/openapi.json
