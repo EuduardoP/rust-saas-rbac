@@ -16,8 +16,14 @@ db-studio:
     rainfrog -u {{env_var('DATABASE_URL')}}
 
 # Run app Dioxus (hot reload)
-dev:
+serve:
     dx serve -p web
+
+tailwind:
+    npx @tailwindcss/cli -i ./tailwind.css -o ./packages/web/assets/tailwind.css --watch
+
+server:
+  cargo watch --env-file .env -q -x 'run -p server --quiet'
 
 # Run migrations
 migrate:
@@ -29,7 +35,7 @@ migrate-down:
 
 # Generate entities
 generate:
-    sea-orm-cli generate entity -u {{env_var('DATABASE_URL')}} -o packages/api/src/db/entities --with-serde both
+    sea-orm-cli generate entity -u {{env_var('DATABASE_URL')}} -o packages/entities/src --with-serde both
 
 # Run both migration and generate
 db-push: migrate generate
