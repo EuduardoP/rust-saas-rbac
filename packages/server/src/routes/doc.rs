@@ -1,4 +1,5 @@
 use crate::routes::auth::{
+    authenticate_with_github::{AuthenticateWithGithubBody, AuthenticateWithGithubResponse},
     authenticate_with_password::{AuthenticateWithPasswordBody, AuthenticateWithPasswordResponse},
     create_account::{CreateAccountBody, CreateAccountResponse},
 };
@@ -16,12 +17,15 @@ use utoipa::OpenApi;
     paths(
         crate::routes::auth::create_account::create_account,
         crate::routes::auth::authenticate_with_password::authenticate_with_password,
+        crate::routes::auth::authenticate_with_github::authenticate_with_github,
     ),
     components(schemas(
         CreateAccountBody,
         CreateAccountResponse,
         AuthenticateWithPasswordBody,
-        AuthenticateWithPasswordResponse
+        AuthenticateWithPasswordResponse,
+        AuthenticateWithGithubBody,
+        AuthenticateWithGithubResponse,
     )),
     info(title = "Rust SaaS RBAC API", version = "1.0.0")
 )]
