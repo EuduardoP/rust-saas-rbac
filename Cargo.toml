@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["packages/ui", "packages/web", "packages/api", "packages/migration", "packages/server"]
+members = ["packages/ui", "packages/web", "packages/api", "packages/migration", "packages/server", "packages/rbac"]
 
 [workspace.dependencies]
 dioxus = { version = "0.7.1" }
