@@ -25,6 +25,9 @@ tailwind:
 server:
   cargo watch --env-file .env -q -x 'run -p server --quiet'
 
+dev:
+  mprocs "just tailwind" "just serve" "just server" "cargo run --bin gen-openapi -p server"
+
 # Run migrations
 migrate:
     sea-orm-cli migrate up --migration-dir packages/migration
@@ -36,6 +39,9 @@ migrate-down:
 # Generate entities
 generate:
     sea-orm-cli generate entity -u {{env_var('DATABASE_URL')}} -o packages/entities/src --with-serde both
+
+generate-doc:
+    cargo run --bin gen-openapi -p server
 
 # Run both migration and generate
 db-push: migrate generate
