@@ -1,4 +1,6 @@
 use crate::AppState;
+use argon2::password_hash::{rand_core::OsRng, SaltString};
+use argon2::{Argon2, PasswordHasher};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -14,8 +16,6 @@ use tracing::error;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
-use argon2::password_hash::{rand_core::OsRng, SaltString};
-use argon2::{Argon2, PasswordHasher};
 
 #[derive(Serialize, Deserialize, Validate, Debug, Clone, ToSchema)]
 pub struct CreateAccountBody {
@@ -26,7 +26,7 @@ pub struct CreateAccountBody {
     pub password: String,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 pub struct CreateAccountResponse {
     #[serde(rename = "userId")]
     pub user_id: Uuid,
@@ -53,7 +53,7 @@ pub async fn create_account(
         error!("Validation error: {}", e);
         return (
             StatusCode::BAD_REQUEST,
-            Json(json!({"error": format!("Validation error: {}", e)})),
+            Json(json!({ "error": format!("Validation error: {}", e) })),
         );
     }
 
