@@ -1,10 +1,9 @@
-use crate::AppState;
+use crate::{auth::Claims, error::ErrorResponse, AppState};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use entities::{accounts, sea_orm_active_enums::AccountProvider, users};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use time::{Duration, OffsetDateTime};
 use tracing::error;
 use utoipa::ToSchema;
@@ -30,12 +29,6 @@ struct GithubUserResponse {
     name: Option<String>,
     email: Option<String>,
     avatar_url: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    sub: String,
-    exp: i64,
 }
 
 #[utoipa::path(
@@ -71,10 +64,12 @@ pub async fn authenticate_with_github(
         Ok(res) => res,
         Err(e) => {
             error!("GitHub token request failed: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "GitHub authentication failed" })),
-            );
+                Json(ErrorResponse {
+                    error: String::from("GitHub authentication failed"),
+                }),
+            ));
         }
     };
 
@@ -82,10 +77,12 @@ pub async fn authenticate_with_github(
         Ok(data) => data,
         Err(e) => {
             error!("Invalid GitHub token response: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "GitHub authentication failed" })),
-            );
+                Json(ErrorResponse {
+                    error: String::from("GitHub authentication failed"),
+                }),
+            ));
         }
     };
 
@@ -103,10 +100,12 @@ pub async fn authenticate_with_github(
         Ok(res) => res,
         Err(e) => {
             error!("GitHub user request failed: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "GitHub authentication failed" })),
-            );
+                Json(ErrorResponse {
+                    error: String::from("GitHub authentication failed"),
+                }),
+            ));
         }
     };
 
@@ -114,22 +113,24 @@ pub async fn authenticate_with_github(
         Ok(data) => data,
         Err(e) => {
             error!("Invalid GitHub user response: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "GitHub authentication failed" })),
-            );
+                Json(ErrorResponse {
+                    error: String::from("GitHub authentication failed"),
+                }),
+            ));
         }
     };
 
     let email = match github_user.email {
         Some(email) => email,
         None => {
-            return (
+            return Err((
                 StatusCode::BAD_REQUEST,
-                Json(json!({
-                    "error": "Your GitHub account must have an email to authenticate."
-                })),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Your GitHub account must have an email to authenticate."),
+                }),
+            ));
         }
     };
 
@@ -156,19 +157,23 @@ pub async fn authenticate_with_github(
                 Ok(user) => user,
                 Err(e) => {
                     error!("Failed to create user: {}", e);
-                    return (
+                    return Err((
                         StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(json!({ "error": "Internal server error" })),
-                    );
+                        Json(ErrorResponse {
+                            error: String::from("Internal server error"),
+                        }),
+                    ));
                 }
             }
         }
         Err(e) => {
             error!("User query failed: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "Internal server error" })),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
@@ -191,10 +196,12 @@ pub async fn authenticate_with_github(
 
         if let Err(e) = new_account.insert(&state.db).await {
             error!("Failed to create account: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "Internal server error" })),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     }
 
@@ -217,15 +224,17 @@ pub async fn authenticate_with_github(
         Ok(token) => token,
         Err(e) => {
             error!("JWT generation failed: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "Internal server error" })),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
-    (
+    Ok((
         StatusCode::CREATED,
-        Json(json!(AuthenticateWithGithubResponse { token })),
-    )
+        Json(AuthenticateWithGithubResponse { token }),
+    ))
 }

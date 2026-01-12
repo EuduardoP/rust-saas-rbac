@@ -1,14 +1,13 @@
+use crate::{error::ErrorResponse, AppState};
 use axum::{extract::State, response::IntoResponse, Json};
 use entities::{sea_orm_active_enums::TokenType, tokens, users};
 use reqwest::StatusCode;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use tracing::error;
 use utoipa::ToSchema;
+use uuid::Uuid;
 use validator::Validate;
-
-use crate::AppState;
 
 #[derive(Serialize, Deserialize, ToSchema, Validate)]
 pub struct RequestPasswordRecoverBody {
@@ -16,10 +15,30 @@ pub struct RequestPasswordRecoverBody {
     pub email: String,
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct RequestPasswordRecoverResponse {
+    pub code: Uuid,
+}
+
+#[utoipa::path(
+    post,
+    path = "/request-password-recover",
+    tag = "Auth",
+    request_body = RequestPasswordRecoverBody,
+    responses(
+        (status = 200, description = "Password recovery requested successfully", body = RequestPasswordRecoverResponse),
+        (status = 400, description = "Validation error"),
+        (status = 403, description = "Invalid credentials"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn request_password_recover(
     State(state): State<AppState>,
     Json(body): Json<RequestPasswordRecoverBody>,
 ) -> impl IntoResponse {
+    // NOTE: This implementation is for testing purposes only.
+    // In a real application, the recovery code should not be returned directly in the response.
+    // Instead, an email containing a link with the recovery code should be sent to the user.
     let user_from_email = match users::Entity::find()
         .filter(users::Column::Email.eq(body.email.clone()))
         .one(&state.db)
@@ -27,17 +46,21 @@ pub async fn request_password_recover(
     {
         Ok(Some(user)) => user,
         Ok(None) => {
-            return (
+            return Err((
                 StatusCode::FORBIDDEN,
-                Json(json!({"error": "Invalid credentials."})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Invalid credentials."),
+                }),
+            ));
         }
         Err(e) => {
             error!("Db query error: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Internal server error"})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
@@ -49,13 +72,8 @@ pub async fn request_password_recover(
 
     let code = token.id.unwrap();
 
-    // Implementation goes here
-    // This is a placeholder to show where the logic would be implemented
-    (
+    Ok((
         StatusCode::OK,
-        Json(json!({
-            "message": "If the email exists, a recovery link has been sent.",
-            "code": code.clone()
-        })),
-    )
+        Json(RequestPasswordRecoverResponse { code }),
+    ))
 }

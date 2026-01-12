@@ -1,11 +1,10 @@
-use crate::AppState;
+use crate::{auth::Claims, error::ErrorResponse, AppState};
 use argon2::{password_hash::PasswordHash, Argon2, PasswordVerifier};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use entities::users;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use time::{Duration, OffsetDateTime};
 use tracing::error;
 use utoipa::ToSchema;
@@ -22,12 +21,6 @@ pub struct AuthenticateWithPasswordBody {
 #[derive(Serialize, ToSchema)]
 pub struct AuthenticateWithPasswordResponse {
     pub token: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    sub: String,
-    exp: i64,
 }
 
 #[utoipa::path(
@@ -49,10 +42,12 @@ pub async fn authenticate_with_password(
 ) -> impl IntoResponse {
     if let Err(e) = body.validate() {
         error!("Validation error: {}", e);
-        return (
+        return Err((
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": format!("Validation error: {}", e) })),
-        );
+            Json(ErrorResponse {
+                error: format!("Validation error: {}", e),
+            }),
+        ));
     }
 
     let user = match users::Entity::find()
@@ -62,27 +57,33 @@ pub async fn authenticate_with_password(
     {
         Ok(Some(user)) => user,
         Ok(None) => {
-            return (
+            return Err((
                 StatusCode::FORBIDDEN,
-                Json(json!({"error": "Invalid credentials."})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Invalid credentials."),
+                }),
+            ));
         }
         Err(e) => {
             error!("Db query error: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Internal server error"})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
     let password_hash = match user.password_hash {
         Some(hash) => hash,
         None => {
-            return (
+            return Err((
                 StatusCode::BAD_REQUEST,
-                Json(json!({"error": "User does not have a password, use social login."})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("User does not have a password, use social login."),
+                }),
+            ));
         }
     };
 
@@ -90,10 +91,12 @@ pub async fn authenticate_with_password(
         Ok(hash) => hash,
         Err(e) => {
             error!("Failed to parse password hash from database: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Internal server error"})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
@@ -101,10 +104,12 @@ pub async fn authenticate_with_password(
         .verify_password(body.password.as_bytes(), &parsed_hash)
         .is_err()
     {
-        return (
+        return Err((
             StatusCode::FORBIDDEN,
-            Json(json!({"error": "Invalid credentials."})),
-        );
+            Json(ErrorResponse {
+                error: String::from("Invalid credentials."),
+            }),
+        ));
     }
 
     let now = OffsetDateTime::now_utc();
@@ -123,15 +128,17 @@ pub async fn authenticate_with_password(
         Ok(t) => t,
         Err(e) => {
             error!("Failed to generate JWT: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Internal server error"})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
-    (
+    Ok((
         StatusCode::CREATED,
-        Json(json!(AuthenticateWithPasswordResponse { token })),
-    )
+        Json(AuthenticateWithPasswordResponse { token }),
+    ))
 }

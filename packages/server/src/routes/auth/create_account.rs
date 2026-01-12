@@ -1,4 +1,4 @@
-use crate::AppState;
+use crate::{error::ErrorResponse, AppState};
 use argon2::password_hash::{rand_core::OsRng, SaltString};
 use argon2::{Argon2, PasswordHasher};
 use axum::extract::State;
@@ -11,7 +11,6 @@ use entities::sea_orm_active_enums::Role;
 use entities::users as Users;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use tracing::error;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -51,10 +50,12 @@ pub async fn create_account(
 ) -> impl IntoResponse {
     if let Err(e) = body.validate() {
         error!("Validation error: {}", e);
-        return (
+        return Err((
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": format!("Validation error: {}", e) })),
-        );
+            Json(ErrorResponse {
+                error: format!("Validation error: {}", e),
+            }),
+        ));
     }
 
     let user_exists = match Users::Entity::find()
@@ -65,18 +66,22 @@ pub async fn create_account(
         Ok(user) => user,
         Err(e) => {
             error!("Db query error: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Internal server error"})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
     if user_exists.is_some() {
-        return (
+        return Err((
             StatusCode::CONFLICT,
-            Json(json!({"error": "User with same e-mail already exists."})),
-        );
+            Json(ErrorResponse {
+                error: String::from("User with same e-mail already exists."),
+            }),
+        ));
     }
 
     let domain = body.email.split('@').nth(1).unwrap_or("");
@@ -90,10 +95,12 @@ pub async fn create_account(
         Ok(org) => org,
         Err(e) => {
             error!("Error fetching organization: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Internal server error"})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
@@ -104,10 +111,12 @@ pub async fn create_account(
         Ok(hash) => hash.to_string(),
         Err(e) => {
             error!("Error generating hash: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Internal server error"})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
@@ -122,10 +131,12 @@ pub async fn create_account(
         Ok(user) => user,
         Err(e) => {
             error!("Error creating user: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Internal server error"})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     };
 
@@ -139,17 +150,19 @@ pub async fn create_account(
 
         if let Err(e) = new_member.insert(&state.db).await {
             error!("Error adding member: {}", e);
-            return (
+            return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Internal server error"})),
-            );
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
         }
     }
 
-    (
+    Ok((
         StatusCode::CREATED,
-        Json(json!(CreateAccountResponse {
+        Json(CreateAccountResponse {
             user_id: inserted_user.id,
-        })),
-    )
+        }),
+    ))
 }
