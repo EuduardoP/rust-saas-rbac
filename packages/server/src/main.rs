@@ -4,7 +4,8 @@ use server::{
         auth::{
             authenticate_with_github::authenticate_with_github,
             authenticate_with_password::authenticate_with_password, create_account::create_account,
-            get_profile::get_profile,
+            get_profile::get_profile, request_password_recover::request_password_recover,
+            reset_password::reset_password,
         },
         doc::{doc, openapi_spec_handler},
     },
@@ -57,6 +58,8 @@ async fn main() {
         .route("/sessions/password", post(authenticate_with_password))
         .route("/sessions/github", post(authenticate_with_github))
         .route("/profile", get(get_profile))
+        .route("/password/recover", post(request_password_recover))
+        .route("/password/reset", post(reset_password))
         .with_state(app_state);
 
     // run our app with hyper, listening globally on port 3000

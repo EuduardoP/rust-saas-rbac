@@ -2,7 +2,7 @@ use crate::{error::ErrorResponse, AppState};
 use axum::{extract::State, response::IntoResponse, Json};
 use entities::{sea_orm_active_enums::TokenType, tokens, users};
 use reqwest::StatusCode;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
 use tracing::error;
 use utoipa::ToSchema;
@@ -22,7 +22,7 @@ pub struct RequestPasswordRecoverResponse {
 
 #[utoipa::path(
     post,
-    path = "/request-password-recover",
+    path = "/password/recover",
     tag = "Auth",
     request_body = RequestPasswordRecoverBody,
     responses(
@@ -32,6 +32,7 @@ pub struct RequestPasswordRecoverResponse {
         (status = 500, description = "Internal server error")
     )
 )]
+/// Request password recovery for a user by email.
 pub async fn request_password_recover(
     State(state): State<AppState>,
     Json(body): Json<RequestPasswordRecoverBody>,
@@ -70,10 +71,21 @@ pub async fn request_password_recover(
         ..Default::default()
     };
 
-    let code = token.id.unwrap();
+    let token = match token.insert(&state.db).await {
+        Ok(token) => token,
+        Err(e) => {
+            error!("Db query error: {}", e);
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: String::from("Internal server error"),
+                }),
+            ));
+        }
+    };
 
     Ok((
         StatusCode::OK,
-        Json(RequestPasswordRecoverResponse { code }),
+        Json(RequestPasswordRecoverResponse { code: token.id }),
     ))
 }

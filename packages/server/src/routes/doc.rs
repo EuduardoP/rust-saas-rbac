@@ -1,4 +1,5 @@
 use crate::error::ErrorResponse;
+use crate::routes::auth::reset_password::ResetPasswordRequest;
 use crate::routes::auth::{
     authenticate_with_github::{AuthenticateWithGithubBody, AuthenticateWithGithubResponse},
     authenticate_with_password::{AuthenticateWithPasswordBody, AuthenticateWithPasswordResponse},
@@ -38,6 +39,7 @@ impl Modify for SecurityAddon {
         crate::routes::auth::authenticate_with_github::authenticate_with_github,
         crate::routes::auth::get_profile::get_profile,
         crate::routes::auth::request_password_recover::request_password_recover,
+        crate::routes::auth::reset_password::reset_password,
     ),
     components(schemas(
         CreateAccountBody,
@@ -50,6 +52,7 @@ impl Modify for SecurityAddon {
         ErrorResponse,
         RequestPasswordRecoverBody,
         RequestPasswordRecoverResponse,
+        ResetPasswordRequest
     )),
     info(title = "Rust SaaS RBAC API", version = "1.0.0"),
     modifiers(&SecurityAddon)
