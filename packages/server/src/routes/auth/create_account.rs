@@ -1,14 +1,10 @@
 use crate::{error::ErrorResponse, AppState};
-use argon2::password_hash::{rand_core::OsRng, SaltString};
-use argon2::{Argon2, PasswordHasher};
-use axum::extract::State;
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::Json;
-use entities::members as Members;
-use entities::organizations as Orgs;
-use entities::sea_orm_active_enums::Role;
-use entities::users as Users;
+use argon2::{
+    password_hash::{rand_core::OsRng, SaltString},
+    Argon2, PasswordHasher,
+};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use entities::{members, organizations, sea_orm_active_enums::Role, users};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
 use tracing::error;
@@ -58,8 +54,8 @@ pub async fn create_account(
         ));
     }
 
-    let user_exists = match Users::Entity::find()
-        .filter(Users::Column::Email.eq(body.email.clone()))
+    let user_exists = match users::Entity::find()
+        .filter(users::Column::Email.eq(body.email.clone()))
         .one(&state.db)
         .await
     {
@@ -86,9 +82,9 @@ pub async fn create_account(
 
     let domain = body.email.split('@').nth(1).unwrap_or("");
 
-    let auto_join_organization = match Orgs::Entity::find()
-        .filter(Orgs::Column::Domain.eq(domain))
-        .filter(Orgs::Column::ShouldAttachUsersByDomain.eq(true))
+    let auto_join_organization = match organizations::Entity::find()
+        .filter(organizations::Column::Domain.eq(domain))
+        .filter(organizations::Column::ShouldAttachUsersByDomain.eq(true))
         .one(&state.db)
         .await
     {
@@ -120,7 +116,7 @@ pub async fn create_account(
         }
     };
 
-    let new_user = Users::ActiveModel {
+    let new_user = users::ActiveModel {
         name: Set(Some(body.name.clone())),
         email: Set(body.email.clone()),
         password_hash: Set(Some(password_hash)),
@@ -141,7 +137,7 @@ pub async fn create_account(
     };
 
     if let Some(org) = auto_join_organization {
-        let new_member = Members::ActiveModel {
+        let new_member = members::ActiveModel {
             user_id: Set(inserted_user.id),
             organization_id: Set(org.id),
             role: Set(Role::Member),
