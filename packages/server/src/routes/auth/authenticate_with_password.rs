@@ -42,11 +42,9 @@ pub async fn authenticate_with_password(
 ) -> impl IntoResponse {
     if let Err(e) = body.validate() {
         error!("Validation error: {}", e);
-        return Err((
+        return Err(ErrorResponse::new(
             StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: format!("Validation error: {}", e),
-            }),
+            format!("Validation error: {}", e),
         ));
     }
 
@@ -57,32 +55,23 @@ pub async fn authenticate_with_password(
     {
         Ok(Some(user)) => user,
         Ok(None) => {
-            return Err((
+            return Err(ErrorResponse::new(
                 StatusCode::FORBIDDEN,
-                Json(ErrorResponse {
-                    error: String::from("Invalid credentials."),
-                }),
+                "Invalid credentials.",
             ));
         }
         Err(e) => {
             error!("Db query error: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: String::from("Internal server error"),
-                }),
-            ));
+            return Err(ErrorResponse::internal_error());
         }
     };
 
     let password_hash = match user.password_hash {
         Some(hash) => hash,
         None => {
-            return Err((
+            return Err(ErrorResponse::new(
                 StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: String::from("User does not have a password, use social login."),
-                }),
+                "User does not have a password, use social login.",
             ));
         }
     };
@@ -91,12 +80,7 @@ pub async fn authenticate_with_password(
         Ok(hash) => hash,
         Err(e) => {
             error!("Failed to parse password hash from database: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: String::from("Internal server error"),
-                }),
-            ));
+            return Err(ErrorResponse::internal_error());
         }
     };
 
@@ -104,11 +88,9 @@ pub async fn authenticate_with_password(
         .verify_password(body.password.as_bytes(), &parsed_hash)
         .is_err()
     {
-        return Err((
+        return Err(ErrorResponse::new(
             StatusCode::FORBIDDEN,
-            Json(ErrorResponse {
-                error: String::from("Invalid credentials."),
-            }),
+            "Invalid credentials.",
         ));
     }
 
@@ -128,12 +110,7 @@ pub async fn authenticate_with_password(
         Ok(t) => t,
         Err(e) => {
             error!("Failed to generate JWT: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: String::from("Internal server error"),
-                }),
-            ));
+            return Err(ErrorResponse::internal_error());
         }
     };
 

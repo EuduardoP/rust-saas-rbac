@@ -46,11 +46,9 @@ pub async fn create_account(
 ) -> impl IntoResponse {
     if let Err(e) = body.validate() {
         error!("Validation error: {}", e);
-        return Err((
+        return Err(ErrorResponse::new(
             StatusCode::BAD_REQUEST,
-            Json(ErrorResponse {
-                error: format!("Validation error: {}", e),
-            }),
+            format!("Validation error: {}", e),
         ));
     }
 
@@ -62,21 +60,14 @@ pub async fn create_account(
         Ok(user) => user,
         Err(e) => {
             error!("Db query error: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: String::from("Internal server error"),
-                }),
-            ));
+            return Err(ErrorResponse::internal_error());
         }
     };
 
     if user_exists.is_some() {
-        return Err((
+        return Err(ErrorResponse::new(
             StatusCode::CONFLICT,
-            Json(ErrorResponse {
-                error: String::from("User with same e-mail already exists."),
-            }),
+            "User with same e-mail already exists.",
         ));
     }
 
@@ -91,12 +82,7 @@ pub async fn create_account(
         Ok(org) => org,
         Err(e) => {
             error!("Error fetching organization: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: String::from("Internal server error"),
-                }),
-            ));
+            return Err(ErrorResponse::internal_error());
         }
     };
 
@@ -107,12 +93,7 @@ pub async fn create_account(
         Ok(hash) => hash.to_string(),
         Err(e) => {
             error!("Error generating hash: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: String::from("Internal server error"),
-                }),
-            ));
+            return Err(ErrorResponse::internal_error());
         }
     };
 
@@ -127,12 +108,7 @@ pub async fn create_account(
         Ok(user) => user,
         Err(e) => {
             error!("Error creating user: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: String::from("Internal server error"),
-                }),
-            ));
+            return Err(ErrorResponse::internal_error());
         }
     };
 
@@ -146,12 +122,7 @@ pub async fn create_account(
 
         if let Err(e) = new_member.insert(&state.db).await {
             error!("Error adding member: {}", e);
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: String::from("Internal server error"),
-                }),
-            ));
+            return Err(ErrorResponse::internal_error());
         }
     }
 

@@ -40,20 +40,10 @@ pub async fn get_profile(
     let user = match users::Entity::find_by_id(user_id).one(&state.db).await {
         Ok(Some(user)) => user,
         Ok(None) => {
-            return Err((
-                StatusCode::UNAUTHORIZED,
-                Json(ErrorResponse {
-                    error: String::from("User not found"),
-                }),
-            ))
+            return Err(ErrorResponse::unauthorized())
         }
         Err(_) => {
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ErrorResponse {
-                    error: String::from("Internal server error"),
-                }),
-            ))
+            return Err(ErrorResponse::internal_error())
         }
     };
 

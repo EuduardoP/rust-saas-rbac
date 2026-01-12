@@ -1,4 +1,3 @@
-use crate::error::ErrorResponse;
 use crate::routes::auth::reset_password::ResetPasswordRequest;
 use crate::routes::auth::{
     authenticate_with_github::{AuthenticateWithGithubBody, AuthenticateWithGithubResponse},
@@ -49,7 +48,6 @@ impl Modify for SecurityAddon {
         AuthenticateWithGithubBody,
         AuthenticateWithGithubResponse,
         ProfileResponse,
-        ErrorResponse,
         RequestPasswordRecoverBody,
         RequestPasswordRecoverResponse,
         ResetPasswordRequest
