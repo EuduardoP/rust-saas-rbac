@@ -25,3 +25,4 @@ scalar-doc = "0.1.2"
 jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
 time = "0.3.44"
 reqwest = { version = "0.13.1", features = ["json", "form"] }
+axum-auth = { version = "0.8.1", features = ["auth-bearer"] }

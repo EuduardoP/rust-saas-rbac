@@ -1,7 +1,10 @@
+use crate::error::ErrorResponse;
 use crate::routes::auth::{
     authenticate_with_github::{AuthenticateWithGithubBody, AuthenticateWithGithubResponse},
     authenticate_with_password::{AuthenticateWithPasswordBody, AuthenticateWithPasswordResponse},
     create_account::{CreateAccountBody, CreateAccountResponse},
+    get_profile::ProfileResponse,
+    request_password_recover::{RequestPasswordRecoverBody, RequestPasswordRecoverResponse},
 };
 use axum::{
     body::Body,
@@ -10,7 +13,22 @@ use axum::{
 };
 use scalar_doc::Documentation;
 use std::fs;
-use utoipa::OpenApi;
+use utoipa::{
+    openapi::security::{Http, HttpAuthScheme, SecurityScheme},
+    Modify, OpenApi,
+};
+
+struct SecurityAddon;
+
+impl Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let components = openapi.components.get_or_insert_with(Default::default);
+        components.add_security_scheme(
+            "token",
+            SecurityScheme::Http(Http::new(HttpAuthScheme::Bearer)),
+        );
+    }
+}
 
 #[derive(OpenApi)]
 #[openapi(
@@ -18,6 +36,8 @@ use utoipa::OpenApi;
         crate::routes::auth::create_account::create_account,
         crate::routes::auth::authenticate_with_password::authenticate_with_password,
         crate::routes::auth::authenticate_with_github::authenticate_with_github,
+        crate::routes::auth::get_profile::get_profile,
+        crate::routes::auth::request_password_recover::request_password_recover,
     ),
     components(schemas(
         CreateAccountBody,
@@ -26,8 +46,13 @@ use utoipa::OpenApi;
         AuthenticateWithPasswordResponse,
         AuthenticateWithGithubBody,
         AuthenticateWithGithubResponse,
+        ProfileResponse,
+        ErrorResponse,
+        RequestPasswordRecoverBody,
+        RequestPasswordRecoverResponse,
     )),
-    info(title = "Rust SaaS RBAC API", version = "1.0.0")
+    info(title = "Rust SaaS RBAC API", version = "1.0.0"),
+    modifiers(&SecurityAddon)
 )]
 pub struct ApiDoc;
 
