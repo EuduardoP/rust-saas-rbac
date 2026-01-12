@@ -4711,6 +4711,7 @@ dependencies = [
  "axum-auth",
  "entities",
  "jsonwebtoken",
+ "rbac",
  "reqwest 0.13.1",
  "scalar-doc",
  "sea-orm",

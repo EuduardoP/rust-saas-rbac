@@ -6,6 +6,7 @@ use crate::routes::auth::{
     get_profile::ProfileResponse,
     request_password_recover::{RequestPasswordRecoverBody, RequestPasswordRecoverResponse},
 };
+use crate::routes::members::get_members::GetMembersResponse;
 use axum::{
     body::Body,
     http::{header, Response, StatusCode},
@@ -39,6 +40,7 @@ impl Modify for SecurityAddon {
         crate::routes::auth::get_profile::get_profile,
         crate::routes::auth::request_password_recover::request_password_recover,
         crate::routes::auth::reset_password::reset_password,
+        crate::routes::members::get_members::get_members
     ),
     components(schemas(
         CreateAccountBody,
@@ -50,7 +52,8 @@ impl Modify for SecurityAddon {
         ProfileResponse,
         RequestPasswordRecoverBody,
         RequestPasswordRecoverResponse,
-        ResetPasswordRequest
+        ResetPasswordRequest,
+        GetMembersResponse,
     )),
     info(title = "Rust SaaS RBAC API", version = "1.0.0"),
     modifiers(&SecurityAddon)

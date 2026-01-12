@@ -1,6 +1,6 @@
 use crate::{error::ErrorResponse, AppState};
 use axum::{
-    http::{HeaderMap, StatusCode},
+    http::StatusCode,
     Json,
 };
 use entities::{members, organizations};

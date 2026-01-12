@@ -8,6 +8,7 @@ use server::{
             reset_password::reset_password,
         },
         doc::{doc, openapi_spec_handler},
+        members::get_members::get_members,
     },
     AppState,
 };
@@ -60,6 +61,7 @@ async fn main() {
         .route("/profile", get(get_profile))
         .route("/password/recover", post(request_password_recover))
         .route("/password/reset", post(reset_password))
+        .route("/organizations/{slug}/members", get(get_members))
         .with_state(app_state);
 
     // run our app with hyper, listening globally on port 3000
